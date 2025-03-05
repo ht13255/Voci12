@@ -26,7 +26,7 @@ def ai_optimize_parameters(audio_seg):
 
 # NumPy 배열을 AudioSegment (16-bit PCM)로 변환
 def numpy_to_audiosegment(audio_array, sr):
-    audio_array = np.int16(audio_array * 32767)  # 16-bit PCM 변환
+    audio_array = np.int16(audio_array * 32767)
     return AudioSegment(
         audio_array.tobytes(),
         frame_rate=sr,
@@ -72,20 +72,26 @@ def mix_audio(vocal_array: np.ndarray, mr_array: np.ndarray, sr: int) -> AudioSe
 
 # AI 기반 베이스 부스트 (간단한 예제)
 def apply_bass_boost(audio, boost_factor=1.2, cutoff=150):
-    # 여기서는 단순히 boost_factor * 5 dB를 더한 후 low pass filter 적용
+    # boost_factor * 5 dB 만큼 증폭 후 low pass filter 적용
     return effects.low_pass_filter(audio + boost_factor * 5, cutoff=cutoff)
 
 def main():
     st.title("🎶 AI 음원 정제 & 자동 믹싱 프로그램")
-    st.write("AI가 모든 단계에 개입하여 최적의 파라미터로 음성을 정제하고, 믹싱합니다. GitHub 배포 환경에서도 문제없이 작동합니다.")
+    st.write("사이드바에서 원하는 작업을 선택하세요.")
 
-    uploaded_file = st.file_uploader("🎤 오디오 파일을 업로드하세요", type=["wav", "mp3"])
+    # 사이드바를 활용한 작업 선택
+    option = st.sidebar.radio(
+        "작업 선택",
+        ("🎧 녹음 정제", "🎤 현장 녹음 정제", "🎼 AI 믹싱")
+    )
 
-    # file_path와 mr_path를 미리 None으로 초기화 (NameError 방지)
+    # 파일 경로 변수 초기화
     file_path = None
     mr_path = None
+    processed_audio = None
 
-    processed_audio = None  # 처리된 오디오 저장 변수
+    # 모든 모드에서 공통으로 오디오 파일 업로드
+    uploaded_file = st.file_uploader("🎤 오디오 파일을 업로드하세요", type=["wav", "mp3"])
 
     if uploaded_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
@@ -98,20 +104,20 @@ def main():
             st.error(f"오디오 로드 오류: {e}")
             return
 
-        option = st.radio("어떤 작업을 수행하시겠습니까?", ["🎧 녹음 정제", "🎤 현장 녹음 정제", "🎼 AI 믹싱"])
-
         if option == "🎧 녹음 정제":
             st.write("🔹 AI가 녹음된 음성을 깨끗하게 정제합니다.")
             try:
                 processed_audio = process_recorded_audio(audio_array, sr)
             except Exception as e:
                 st.error(f"녹음 정제 오류: {e}")
+
         elif option == "🎤 현장 녹음 정제":
             st.write("🔹 AI가 페스티벌 녹음의 노이즈를 정밀하게 제거합니다.")
             try:
                 processed_audio = process_festival_audio(audio_array, sr)
             except Exception as e:
                 st.error(f"현장 녹음 정제 오류: {e}")
+
         elif option == "🎼 AI 믹싱":
             st.write("🔹 AI가 MR과 보컬을 자동으로 믹싱합니다.")
             mr_file = st.file_uploader("🎶 MR 파일을 업로드하세요", type=["wav", "mp3"])
@@ -133,14 +139,19 @@ def main():
                 processed_audio.export(output_path, format="wav")
                 st.audio(output_path, format="audio/wav")
                 with open(output_path, "rb") as f:
-                    st.download_button(label="📥 다운로드", data=f.read(), file_name="processed_audio.wav", mime="audio/wav")
+                    st.download_button(
+                        label="📥 다운로드",
+                        data=f.read(),
+                        file_name="processed_audio.wav",
+                        mime="audio/wav"
+                    )
             except Exception as e:
                 st.error(f"출력 파일 생성 오류: {e}")
             finally:
                 if os.path.exists(output_path):
                     os.remove(output_path)
 
-    # 임시 파일 정리 (파일이 존재할 경우에만 삭제)
+    # 임시 파일 정리
     if file_path is not None and os.path.exists(file_path):
         os.remove(file_path)
     if mr_path is not None and os.path.exists(mr_path):
