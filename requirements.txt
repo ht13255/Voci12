@@ -1,6 +1,9 @@
 streamlit
-librosa
-numpy
-pydub
-noisereduce
-ffmpeg
+opencv-python
+moviepy
+ffmpeg-python
+pytube
+transformers
+torch
+sentencepiece
+deep-translator
